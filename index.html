@@ -912,10 +912,38 @@
     paymentInput.value = method;
   }
 
-  /* toast + update / create / deleteAll / loadToday / renderTransactionsTable ... (เหมือนเดิม) */
-  // ... (โค้ดยาว ไม่แสดงซ้ำ แต่เหมือนที่เคยส่งครบทุกฟังก์ชัน)
-  // ให้คัดลอกฟังก์ชัน loadTodayTransactions, createTransaction, updateTransaction, deleteAllTransactions, updateDashboard, renderTransactionsTable, showToast
+    // ================= TEST FUNCTIONS =================
+
+  function showToast(msg, type='success'){
+    alert(msg)
+  }
+
+  function loadTodayTransactions(){
+    console.log("✅ loadTodayTransactions loaded")
+  }
+
+  async function createTransaction(){
+    console.log("✅ createTransaction working");
+
+    showToast("✅ บันทึกแล้ว (ทดสอบ)");
+    transactionForm.reset();
+  }
+
+  async function updateTransaction(){
+    console.log("✅ updateTransaction working");
+    showToast("✅ แก้ไขแล้ว (ทดสอบ)");
+  }
+
+  async function deleteAllTransactions(){
+    console.log("✅ deleteAllTransactions working");
+    showToast("✅ ลบทั้งหมดแล้ว (ทดสอบ)");
+  }
+
+  function renderTransactionsTable(){
+    console.log("✅ renderTransactionsTable working");
+  }
 
   </script>
 </body>
 </html>
+
