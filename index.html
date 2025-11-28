@@ -854,6 +854,61 @@
       box-shadow: 0 3px 8px rgba(37, 99, 235, 0.4);
     }
 
+        /* === Quick coupon chips override === */
+    .quick-amounts {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 8px 18px rgba(148, 163, 184, 0.35);
+    }
+
+    .quick-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.06);
+      border: 1px solid rgba(59, 130, 246, 0.18);
+    }
+
+    .quick-amount {
+      min-width: 56px;
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+      font-size: 13px;
+      font-weight: 600;
+      color: #f9fafb;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.12s ease-out,
+                  box-shadow 0.12s ease-out,
+                  filter 0.12s ease-out;
+    }
+
+    .quick-amount:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.45);
+    }
+
+    .quick-amount:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+    }
+
     /* RESPONSIVE */
     @media (max-width: 768px) {
       body { padding: 12px; }
@@ -1497,6 +1552,7 @@ function showToast(message, type = 'success') {
 </script>
 </body>
 </html>
+
 
 
 
