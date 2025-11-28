@@ -801,150 +801,434 @@
   </div>
 
   <script>
-  // ===== CONFIGURATION =====
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuoNHsu_ZzOJE2YQlcnlt8AxOZYJ7GMPAW0kHoF-76QF6PZ5itnkjB8e-eiFyoqIs_lw/exec";
+// ===== CONFIGURATION =====
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuoNHsu_ZzOJE2YQlcnlt8AxOZYJ7GMPAW0kHoF-76QF6PZ5itnkjB8e-eiFyoqIs_lw/exec";
 
-  // ===== STATE =====
-  let currentTransactions = [];
-  let selectedType = null;
-  let selectedPaymentMethod = null;
-  let isEditing = false;
-  let editingTimestamp = null;
+// ===== STATE =====
+let currentTransactions = [];
+let selectedType = null;
+let selectedPaymentMethod = null;
+let isEditing = false;
+let editingTimestamp = null;
 
-  // ===== ELEMENTS =====
-  const typeOptions = document.querySelectorAll('.type-option');
-  const paymentOptions = document.querySelectorAll('.payment-option');
-  const typeInput = document.getElementById('type');
-  const paymentInput = document.getElementById('payment_method');
-  const transactionForm = document.getElementById('transaction-form');
-  const submitBtn = document.getElementById('submit-btn');
-  const deleteBtn = document.getElementById('delete-btn');
-  const deleteModal = document.getElementById('delete-modal');
-  const confirmDeleteBtn = document.getElementById('confirm-delete');
-  const cancelDeleteBtn = document.getElementById('cancel-delete');
-  const amountInput = document.getElementById('amount');
-  const noteInput = document.getElementById('note');
+// ===== ELEMENTS =====
+const typeOptions = document.querySelectorAll('.type-option');
+const paymentOptions = document.querySelectorAll('.payment-option');
+const typeInput = document.getElementById('type');
+const paymentInput = document.getElementById('payment_method');
+const transactionForm = document.getElementById('transaction-form');
+const submitBtn = document.getElementById('submit-btn');
+const deleteBtn = document.getElementById('delete-btn');
+const deleteModal = document.getElementById('delete-modal');
+const confirmDeleteBtn = document.getElementById('confirm-delete');
+const cancelDeleteBtn = document.getElementById('cancel-delete');
+const amountInput = document.getElementById('amount');
+const noteInput = document.getElementById('note');
 
-  // ===== INITIALIZATION =====
-  document.addEventListener('DOMContentLoaded', () => {
-    loadTodayTransactions();
-    setupEventListeners();
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadTodayTransactions();
+  setupEventListeners();
+});
+
+function setupEventListeners() {
+  // เลือกประเภทรายการ
+  typeOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      setSelectedType(option.dataset.type);
+    });
   });
 
-  function setupEventListeners() {
-    typeOptions.forEach(option => {
-      option.addEventListener('click', () => {
-        setSelectedType(option.dataset.type);
-      });
+  // เลือกวิธีชำระเงิน
+  paymentOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      setSelectedPayment(option.dataset.method);
+    });
+  });
+
+  // ค่าเริ่มต้น = เงินสด
+  setSelectedPayment('cash');
+
+  // ปุ่มคูปองด่วน
+  document.querySelectorAll('.quick-amount').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const add = Number(btn.dataset.add) || 0;
+      const current = parseFloat(amountInput.value) || 0;
+      amountInput.value = current + add;
+      amountInput.focus();
+    });
+  });
+
+  // ส่งฟอร์ม
+  transactionForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!selectedType) {
+      showToast('❌ กรุณาเลือกประเภทรายการ', 'error');
+      return;
+    }
+    if (!selectedPaymentMethod) {
+      showToast('❌ กรุณาเลือกวิธีชำระเงิน', 'error');
+      return;
+    }
+
+    if (isEditing) {
+      await updateTransaction();
+    } else {
+      await createTransaction();
+    }
+  });
+
+  // reset ฟอร์ม
+  transactionForm.addEventListener('reset', () => {
+    amountInput.value = '';
+    noteInput.value = '';
+    exitEditMode();
+  });
+
+  // ปุ่มรีเซ็ตวันนี้
+  deleteBtn.addEventListener('click', () => {
+    deleteModal.classList.add('active');
+  });
+  confirmDeleteBtn.addEventListener('click', async () => {
+    deleteModal.classList.remove('active');
+    await deleteAllTransactions();
+  });
+  cancelDeleteBtn.addEventListener('click', () => {
+    deleteModal.classList.remove('active');
+  });
+  deleteModal.addEventListener('click', (e) => {
+    if (e.target === deleteModal) {
+      deleteModal.classList.remove('active');
+    }
+  });
+}
+
+// ===== SELECT HELPERS =====
+function setSelectedType(type) {
+  typeOptions.forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.type === type);
+  });
+  selectedType = type;
+  typeInput.value = type;
+}
+
+function setSelectedPayment(method) {
+  paymentOptions.forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.method === method);
+  });
+  selectedPaymentMethod = method;
+  paymentInput.value = method;
+}
+
+function enterEditMode(transaction) {
+  isEditing = true;
+  editingTimestamp = transaction.timestamp;
+
+  amountInput.value = transaction.amount;
+  noteInput.value = transaction.note || '';
+  setSelectedType(transaction.type);
+  setSelectedPayment(transaction.payment_method || 'cash');
+
+  submitBtn.textContent = '✅ อัปเดตรายการ';
+}
+
+function exitEditMode() {
+  isEditing = false;
+  editingTimestamp = null;
+  submitBtn.textContent = '💾 บันทึกรายการ';
+}
+
+// ===== API FUNCTIONS =====
+async function loadTodayTransactions() {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=listToday`, {
+      method: 'GET'
     });
 
-    paymentOptions.forEach(option => {
-      option.addEventListener('click', () => {
-        setSelectedPayment(option.dataset.method);
-      });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    currentTransactions = Array.isArray(data) ? data : [];
+    updateDashboard();
+    renderTransactionsTable();
+  } catch (error) {
+    console.error('Error loading transactions:', error);
+    showToast('❌ ไม่สามารถโหลดข้อมูลได้', 'error');
+    currentTransactions = [];
+    updateDashboard();
+    renderTransactionsTable();
+  }
+}
+
+async function createTransaction() {
+  const amount = parseFloat(amountInput.value);
+  const note = noteInput.value || '';
+
+  if (!amount || amount <= 0) {
+    showToast('❌ กรุณากรอกจำนวนเงินให้ถูกต้อง', 'error');
+    return;
+  }
+
+  // เวลา Bangkok
+  const now = new Date();
+  const bangkokTime = new Date(
+    now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
+  );
+  const transaction_date = bangkokTime.toISOString().split('T')[0];
+  const transaction_time = bangkokTime.toTimeString().split(' ')[0];
+
+  const payload = {
+    action: 'create',
+    transaction_date,
+    transaction_time,
+    type: selectedType,
+    payment_method: selectedPaymentMethod,
+    amount,
+    note,
+    timestamp: Date.now()
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
     });
 
-    setSelectedPayment('cash');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-    document.querySelectorAll('.quick-amount').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const add = Number(btn.dataset.add) || 0;
-        const current = parseFloat(amountInput.value) || 0;
-        amountInput.value = current + add;
-        amountInput.focus();
-      });
+    const result = await response.json();
+    if (result.success === true) {
+      showToast('✅ บันทึกรายการสำเร็จ', 'success');
+      amountInput.value = '';
+      noteInput.value = '';
+      await loadTodayTransactions();
+    } else {
+      throw new Error(result.error || 'บันทึกไม่สำเร็จ');
+    }
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    showToast(`❌ ${error.message || 'ไม่สามารถบันทึกรายการได้'}`, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = isEditing ? '✅ อัปเดตรายการ' : '💾 บันทึกรายการ';
+  }
+}
+
+async function updateTransaction() {
+  const amount = parseFloat(amountInput.value);
+  const note = noteInput.value || '';
+
+  const payload = {
+    action: 'update',
+    timestamp: editingTimestamp,
+    type: selectedType,
+    payment_method: selectedPaymentMethod,
+    amount,
+    note
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ กำลังอัปเดต...';
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
     });
 
-    transactionForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!selectedType) {
-        showToast('❌ กรุณาเลือกประเภทรายการ', 'error');
-        return;
-      }
-      if (!selectedPaymentMethod) {
-        showToast('❌ กรุณาเลือกวิธีชำระเงิน', 'error');
-        return;
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      if (isEditing) {
-        await updateTransaction();
-      } else {
-        await createTransaction();
-      }
-    });
-
-    transactionForm.addEventListener('reset', () => {
+    const result = await response.json();
+    if (result.success === true) {
+      showToast('✅ แก้ไขรายการสำเร็จ', 'success');
       amountInput.value = '';
       noteInput.value = '';
       exitEditMode();
+      await loadTodayTransactions();
+    } else {
+      throw new Error(result.error || 'อัปเดตไม่สำเร็จ');
+    }
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    showToast(`❌ ${error.message || 'ไม่สามารถแก้ไขรายการได้'}`, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = isEditing ? '✅ อัปเดตรายการ' : '💾 บันทึกรายการ';
+  }
+}
+
+async function deleteAllTransactions() {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'deleteAll' })
     });
 
-    deleteBtn.addEventListener('click', () => {
-      deleteModal.classList.add('active');
-    });
-    confirmDeleteBtn.addEventListener('click', async () => {
-      deleteModal.classList.remove('active');
-      await deleteAllTransactions();
-    });
-    cancelDeleteBtn.addEventListener('click', () => {
-      deleteModal.classList.remove('active');
-    });
-    deleteModal.addEventListener('click', (e) => {
-      if (e.target === deleteModal) {
-        deleteModal.classList.remove('active');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result.success === true) {
+      showToast('✅ รีเซ็ตระบบสำเร็จ', 'success');
+      await loadTodayTransactions();
+    } else {
+      throw new Error(result.error || 'ลบข้อมูลไม่สำเร็จ');
+    }
+  } catch (error) {
+    console.error('Error deleting transactions:', error);
+    showToast(`❌ ${error.message || 'ไม่สามารถรีเซ็ตระบบได้'}`, 'error');
+  }
+}
+
+// ===== UI UPDATE FUNCTIONS =====
+function updateDashboard() {
+  let totalSales = 0;
+  let totalRefundCustomer = 0;
+  let totalRefundMerchant = 0;
+
+  currentTransactions.forEach(transaction => {
+    const amount = parseFloat(transaction.amount) || 0;
+
+    if (transaction.type === 'sell') {
+      totalSales += amount;
+    } else if (transaction.type === 'refund_customer') {
+      totalRefundCustomer += amount;
+    } else if (transaction.type === 'refund_merchant') {
+      totalRefundMerchant += amount;
+    }
+  });
+
+  const netAmount = totalSales - totalRefundCustomer - totalRefundMerchant;
+
+  document.getElementById('total-sales').textContent =
+    `฿${totalSales.toLocaleString()}`;
+  document.getElementById('total-refund-customer').textContent =
+    `฿${totalRefundCustomer.toLocaleString()}`;
+  document.getElementById('total-refund-merchant').textContent =
+    `฿${totalRefundMerchant.toLocaleString()}`;
+  document.getElementById('net-amount').textContent =
+    `฿${netAmount.toLocaleString()}`;
+  document.getElementById('transaction-count').textContent =
+    `รายการทั้งหมดวันนี้: ${currentTransactions.length} รายการ`;
+}
+
+function renderTransactionsTable() {
+  const container = document.getElementById('transactions-container');
+
+  if (currentTransactions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <div>ยังไม่มีรายการ</div>
+        <div style="margin-top: 5px; font-size: 13px;">
+          เริ่มต้นบันทึกรายการแรกของคุณได้เลย!
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const sortedTransactions = [...currentTransactions].sort((a, b) => {
+    const timeA = a.timestamp || 0;
+    const timeB = b.timestamp || 0;
+    return timeB - timeA;
+  });
+
+  const newestTimestamp = sortedTransactions[0]?.timestamp;
+
+  let tableHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>📅 วันที่</th>
+          <th>🕐 เวลา</th>
+          <th>📝 ประเภท</th>
+          <th>💳 วิธีชำระเงิน</th>
+          <th>💰 จำนวนเงิน</th>
+          <th>📌 หมายเหตุ</th>
+          <th>⚙️ จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  sortedTransactions.forEach(transaction => {
+    const isNewest = transaction.timestamp === newestTimestamp;
+    const badgeClass = `badge badge-${transaction.type.replace('_', '-')}`;
+
+    let typeLabel = '';
+    if (transaction.type === 'sell') typeLabel = '💵 ขายคูปอง';
+    else if (transaction.type === 'refund_customer') typeLabel = '↩️ คืนเงินลูกค้า';
+    else if (transaction.type === 'refund_merchant') typeLabel = '🏪 คืนให้ร้านค้า';
+
+    let paymentLabel = transaction.payment_method === 'transfer'
+      ? '🏦 โอน'
+      : '💵 เงินสด';
+
+    tableHTML += `
+      <tr${isNewest ? ' class="newest"' : ''}>
+        <td>${transaction.transaction_date || '-'}</td>
+        <td>${transaction.transaction_time || '-'}</td>
+        <td><span class="${badgeClass}">${typeLabel}</span></td>
+        <td>${paymentLabel}</td>
+        <td>฿${parseFloat(transaction.amount).toLocaleString()}</td>
+        <td>${transaction.note || '-'}</td>
+        <td>
+          <button class="table-edit-btn" data-timestamp="${transaction.timestamp}">
+            ✏️ แก้ไข
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tableHTML += `
+      </tbody>
+    </table>
+  `;
+
+  container.innerHTML = tableHTML;
+
+  container.querySelectorAll('.table-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ts = btn.getAttribute('data-timestamp');
+      const tx = currentTransactions.find(t => String(t.timestamp) === String(ts));
+      if (tx) {
+        enterEditMode(tx);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
-  }
+  });
+}
 
-  function setSelectedType(type) {
-    typeOptions.forEach(opt => {
-      opt.classList.toggle('selected', opt.dataset.type === type);
-    });
-    selectedType = type;
-    typeInput.value = type;
-  }
+// ===== TOAST =====
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
 
-  function setSelectedPayment(method) {
-    paymentOptions.forEach(opt => {
-      opt.classList.toggle('selected', opt.dataset.method === method);
-    });
-    selectedPaymentMethod = method;
-    paymentInput.value = method;
-  }
-
-    // ================= TEST FUNCTIONS =================
-
-  function showToast(msg, type='success'){
-    alert(msg)
-  }
-
-  function loadTodayTransactions(){
-    console.log("✅ loadTodayTransactions loaded")
-  }
-
-  async function createTransaction(){
-    console.log("✅ createTransaction working");
-
-    showToast("✅ บันทึกแล้ว (ทดสอบ)");
-    transactionForm.reset();
-  }
-
-  async function updateTransaction(){
-    console.log("✅ updateTransaction working");
-    showToast("✅ แก้ไขแล้ว (ทดสอบ)");
-  }
-
-  async function deleteAllTransactions(){
-    console.log("✅ deleteAllTransactions working");
-    showToast("✅ ลบทั้งหมดแล้ว (ทดสอบ)");
-  }
-
-  function renderTransactionsTable(){
-    console.log("✅ renderTransactionsTable working");
-  }
-
-  </script>
+  setTimeout(() => {
+    toast.remove();
+  }, 2800);
+}
+</script>
 </body>
 </html>
+
 
 
