@@ -1247,7 +1247,20 @@ async function loadTodayTransactions() {
     }
 
     const data = await response.json();
-    currentTransactions = Array.isArray(data) ? data : [];
+    console.log('listToday response:', data);   // <-- ดูใน Console ได้
+
+    // ถ้า Apps Script ส่ง { success:false, error:... } มา
+    if (!Array.isArray(data)) {
+      if (data && data.error) {
+        showToast(`❌ เซิร์ฟเวอร์แจ้งข้อผิดพลาด: ${data.error}`, 'error');
+      } else {
+        showToast('❌ รูปแบบข้อมูลจากเซิร์ฟเวอร์ไม่ถูกต้อง', 'error');
+      }
+      currentTransactions = [];
+    } else {
+      currentTransactions = data;
+    }
+
     updateDashboard();
     renderTransactionsTable();
   } catch (error) {
@@ -1273,7 +1286,7 @@ async function createTransaction() {
   const bangkokTime = new Date(
     now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
   );
-  const transaction_date = bangkokTime.toISOString().split('T')[0];
+  const transaction_date = bangkokTime.toISOString().split('T')[0];  // string 2025-11-29
   const transaction_time = bangkokTime.toTimeString().split(' ')[0];
 
   const payload = {
@@ -1552,6 +1565,7 @@ function showToast(message, type = 'success') {
 </script>
 </body>
 </html>
+
 
 
 
