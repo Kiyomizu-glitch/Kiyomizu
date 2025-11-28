@@ -623,6 +623,237 @@
     .modal-btn-confirm { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fee2e2; }
     .modal-btn-cancel { background: #e5e7eb; color: #374151; }
 
+        /* === Glass dashboard cards override === */
+    .dashboard {
+      gap: 18px;
+    }
+
+    .stat-card {
+      position: relative;
+      border-radius: 20px;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    /* ไฮไลต์แสงด้านขวาบนแบบกระจก */
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 55%);
+      opacity: 1;
+      pointer-events: none;
+    }
+
+    /* พื้นสีแต่ละใบ (ใช้ before แยกสี) */
+    .dashboard .stat-card:nth-child(1)::before,
+    .dashboard .stat-card:nth-child(2)::before,
+    .dashboard .stat-card:nth-child(3)::before,
+    .dashboard .stat-card:nth-child(4)::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      mix-blend-mode: soft-light;
+      opacity: 0.95;
+      pointer-events: none;
+    }
+
+    /* ใบที่ 1 – ยอดขายวันนี้: น้ำเงินฟ้า */
+    .dashboard .stat-card:nth-child(1)::before {
+      background: linear-gradient(
+        135deg,
+        rgba(59,130,246,0.75),
+        rgba(125,211,252,0.45)
+      );
+    }
+
+    /* ใบที่ 2 – คืนเงินลูกค้า: เหลืองอมส้ม */
+    .dashboard .stat-card:nth-child(2)::before {
+      background: linear-gradient(
+        135deg,
+        rgba(251,191,36,0.8),
+        rgba(252,211,77,0.5)
+      );
+    }
+
+    /* ใบที่ 3 – คืนให้ร้านค้า: แดงอมชมพู */
+    .dashboard .stat-card:nth-child(3)::before {
+      background: linear-gradient(
+        135deg,
+        rgba(248,113,113,0.8),
+        rgba(252,165,165,0.5)
+      );
+    }
+
+    /* ใบที่ 4 – ยอดสุทธิวันนี้: เขียวมินต์ */
+    .dashboard .stat-card:nth-child(4)::before {
+      background: linear-gradient(
+        135deg,
+        rgba(34,197,94,0.8),
+        rgba(134,239,172,0.5)
+      );
+    }
+
+        /* === Segmented control for type / payment === */
+    .type-selector,
+    .payment-selector {
+      display: flex;               /* จากเดิมเป็น grid → ให้เรียงติดกันในแถวเดียว */
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 0;                      /* ตัดช่องว่างระหว่างปุ่ม ให้เป็นแถบเดียวกัน */
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px solid #d1d5db;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+    }
+
+    .type-option,
+    .payment-option {
+      flex: 1 1 0;                 /* ให้แต่ละปุ่มกว้างเท่ากัน */
+      border-radius: 999px;
+      border: none;                /* ลบเส้นขอบของปุ่มเดิม */
+      background: transparent;     /* พื้นหลังโปร่งใส ปล่อยให้ parent กรอบรวม */
+      box-shadow: none;            /* ตัดเงาเดิมออก */
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      transition: background 0.18s ease-out, box-shadow 0.18s ease-out, color 0.18s ease-out, transform 0.12s ease-out;
+    }
+
+    .type-option .emoji,
+    .payment-option .emoji {
+      font-size: 18px;
+    }
+
+    /* hover ของปุ่มที่ยังไม่ได้เลือก */
+    .type-option:not(.selected):hover,
+    .payment-option:not(.selected):hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(148,163,184,0.35);
+    }
+
+    /* สถานะที่ถูกเลือก (selected) ให้เหมือนปุ่ม active ของ segmented control */
+    .type-option.selected,
+    .payment-option.selected {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #f9fafb;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+
+        /* === Fancy table rows + edit button === */
+
+    /* ปรับพื้นหลังตารางให้ดูนุ่มขึ้นนิดนึง */
+    .table-container {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      background: linear-gradient(135deg, #f9fafb, #ffffff);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.06);
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+
+    thead {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #eff6ff;
+    }
+
+    thead th {
+      font-size: 13px;
+      padding-top: 11px;
+      padding-bottom: 11px;
+      border-bottom: 1px solid rgba(15,23,42,0.15);
+    }
+
+    /* แถวสลับสี */
+    tbody tr {
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: #ffffff;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    /* แถวล่าสุด (newest) เน้นสีเขียวอ่อน */
+    tbody tr.newest {
+      background: linear-gradient(90deg, rgba(34,197,94,0.12), rgba(209,250,229,0.9));
+    }
+
+    /* hover แถว */
+    tbody tr:hover {
+      background: #e0edff;
+      transform: translateY(-1px);
+    }
+
+    /* cell ทั่วไป */
+    td {
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 13px;
+    }
+
+    /* ปรับ badge ให้ขอบมนขึ้นหน่อย */
+    .badge {
+      border-radius: 999px;
+      padding-inline: 12px;
+      padding-block: 4px;
+    }
+
+    /* ปุ่มแก้ไขในตาราง */
+    .table-edit-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #f9fafb;
+      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, filter 0.12s ease-out;
+      white-space: nowrap;
+    }
+
+    .table-edit-btn::before {
+      content: "✏️";
+      font-size: 12px;
+    }
+
+    .table-edit-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.45);
+    }
+
+    .table-edit-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 8px rgba(37, 99, 235, 0.4);
+    }
+
     /* RESPONSIVE */
     @media (max-width: 768px) {
       body { padding: 12px; }
@@ -1266,6 +1497,7 @@ function showToast(message, type = 'success') {
 </script>
 </body>
 </html>
+
 
 
 
