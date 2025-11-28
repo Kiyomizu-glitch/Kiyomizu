@@ -155,6 +155,12 @@
       color: #0f172a;
       letter-spacing: -0.04em;
     }
+    
+        .stat-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
 
     .transaction-count {
       text-align: center;
@@ -655,38 +661,42 @@
 
     <!-- DASHBOARD -->
     <div class="dashboard">
-      <div class="stat-card">
-        <div class="stat-label-row">
-          <div class="stat-label">💵 ยอดขายวันนี้</div>
-          <span class="stat-pill">รับเงินจากขายคูปอง</span>
-        </div>
-        <div class="stat-value" id="total-sales">฿0</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label-row">
-          <div class="stat-label">↩️ คืนเงินลูกค้า</div>
-          <span class="stat-pill">เงินออกให้ลูกค้า</span>
-        </div>
-        <div class="stat-value" id="total-refund-customer">฿0</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label-row">
-          <div class="stat-label">🏪 คืนให้ร้านค้า</div>
-          <span class="stat-pill">ชดเชยให้ร้านค้า</span>
-        </div>
-        <div class="stat-value" id="total-refund-merchant">฿0</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label-row">
-          <div class="stat-label">📊 ยอดสุทธิวันนี้</div>
-          <span class="stat-pill">ยอดรับสุทธิ</span>
-        </div>
-        <div class="stat-value" id="net-amount">฿0</div>
-      </div>
+  <div class="stat-card">
+    <div class="stat-label-row">
+      <div class="stat-label">💵 ยอดขายวันนี้</div>
+      <span class="stat-pill">รับเงินจากขายคูปอง</span>
     </div>
+    <div class="stat-value" id="total-sales">฿0</div>
+    <div class="stat-sub" id="total-sales-breakdown">เงินสด ฿0 • โอน ฿0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label-row">
+      <div class="stat-label">↩️ คืนเงินลูกค้า</div>
+      <span class="stat-pill">เงินออกให้ลูกค้า</span>
+    </div>
+    <div class="stat-value" id="total-refund-customer">฿0</div>
+    <div class="stat-sub" id="total-refund-customer-breakdown">เงินสด ฿0 • โอน ฿0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label-row">
+      <div class="stat-label">🏪 คืนให้ร้านค้า</div>
+      <span class="stat-pill">ชดเชยให้ร้านค้า</span>
+    </div>
+    <div class="stat-value" id="total-refund-merchant">฿0</div>
+    <div class="stat-sub" id="total-refund-merchant-breakdown">เงินสด ฿0 • โอน ฿0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label-row">
+      <div class="stat-label">📊 ยอดสุทธิวันนี้</div>
+      <span class="stat-pill">ยอดรับสุทธิ</span>
+    </div>
+    <div class="stat-value" id="net-amount">฿0</div>
+    <div class="stat-sub" id="net-amount-breakdown">เงินสด ฿0 • โอน ฿0</div>
+  </div>
+</div>
 
     <p class="transaction-count" id="transaction-count">
       รายการทั้งหมดวันนี้: <strong>0</strong> รายการ
@@ -1096,24 +1106,36 @@ async function deleteAllTransactions() {
 
 // ===== UI UPDATE FUNCTIONS =====
 function updateDashboard() {
-  let totalSales = 0;
-  let totalRefundCustomer = 0;
-  let totalRefundMerchant = 0;
+  // รวมยอดตามประเภท + แยกตามวิธีชำระเงิน
+  let salesCash = 0, salesTransfer = 0;
+  let refundCustomerCash = 0, refundCustomerTransfer = 0;
+  let refundMerchantCash = 0, refundMerchantTransfer = 0;
 
   currentTransactions.forEach(transaction => {
     const amount = parseFloat(transaction.amount) || 0;
+    const pm = transaction.payment_method || 'cash'; // ถ้าเก่า ๆ ไม่มีค่า ให้ถือเป็นเงินสด
 
     if (transaction.type === 'sell') {
-      totalSales += amount;
+      if (pm === 'transfer') salesTransfer += amount;
+      else salesCash += amount;
     } else if (transaction.type === 'refund_customer') {
-      totalRefundCustomer += amount;
+      if (pm === 'transfer') refundCustomerTransfer += amount;
+      else refundCustomerCash += amount;
     } else if (transaction.type === 'refund_merchant') {
-      totalRefundMerchant += amount;
+      if (pm === 'transfer') refundMerchantTransfer += amount;
+      else refundMerchantCash += amount;
     }
   });
 
-  const netAmount = totalSales - totalRefundCustomer - totalRefundMerchant;
+  const totalSales = salesCash + salesTransfer;
+  const totalRefundCustomer = refundCustomerCash + refundCustomerTransfer;
+  const totalRefundMerchant = refundMerchantCash + refundMerchantTransfer;
 
+  const netCash = salesCash - refundCustomerCash - refundMerchantCash;
+  const netTransfer = salesTransfer - refundCustomerTransfer - refundMerchantTransfer;
+  const netAmount = netCash + netTransfer;
+
+  // ตัวเลขรวมเดิม
   document.getElementById('total-sales').textContent =
     `฿${totalSales.toLocaleString()}`;
   document.getElementById('total-refund-customer').textContent =
@@ -1122,6 +1144,21 @@ function updateDashboard() {
     `฿${totalRefundMerchant.toLocaleString()}`;
   document.getElementById('net-amount').textContent =
     `฿${netAmount.toLocaleString()}`;
+
+  // แสดงแยก เงินสด / โอน ใต้การ์ด
+  document.getElementById('total-sales-breakdown').textContent =
+    `เงินสด ฿${salesCash.toLocaleString()} • โอน ฿${salesTransfer.toLocaleString()}`;
+
+  document.getElementById('total-refund-customer-breakdown').textContent =
+    `เงินสด ฿${refundCustomerCash.toLocaleString()} • โอน ฿${refundCustomerTransfer.toLocaleString()}`;
+
+  document.getElementById('total-refund-merchant-breakdown').textContent =
+    `เงินสด ฿${refundMerchantCash.toLocaleString()} • โอน ฿${refundMerchantTransfer.toLocaleString()}`;
+
+  document.getElementById('net-amount-breakdown').textContent =
+    `เงินสด ฿${netCash.toLocaleString()} • โอน ฿${netTransfer.toLocaleString()}`;
+
+  // จำนวนรายการ
   document.getElementById('transaction-count').textContent =
     `รายการทั้งหมดวันนี้: ${currentTransactions.length} รายการ`;
 }
@@ -1229,6 +1266,7 @@ function showToast(message, type = 'success') {
 </script>
 </body>
 </html>
+
 
 
 
